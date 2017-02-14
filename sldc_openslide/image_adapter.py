@@ -1,3 +1,4 @@
+import numpy as np
 from sldc import Image, Tile, TileBuilder
 from openslide import OpenSlide
 
@@ -57,6 +58,10 @@ class OpenSlideImage(Image):
     def zoom_level(self, zoom_level):
         self._level = self._validate_zoom_level(zoom_level)
 
+    @property
+    def level_count(self):
+        return self._slide.level_count
+
     def _validate_zoom_level(self, zoom_level):
         """Checks whether the given zoom level is valid for the current image"""
         if not (0 <= zoom_level < self._slide.level_count):
@@ -79,7 +84,10 @@ class OpenSlideTile(Tile):
         base_image = self.base_image
         if not isinstance(base_image, OpenSlideImage):
             raise ValueError("Base image should be an OpenSlideImage object, found '{}'.".format(type(base_image)))
-        return base_image.slide.read_region(self.abs_offset, base_image.zoom_level, (self.width, self.height))
+        offset = self.abs_offset
+        zoom_level = base_image.zoom_level
+        size = (self.width, self.height)
+        return np.asarray(base_image.slide.read_region(offset, zoom_level, size))
 
 
 class OpenSlideTileBuilder(TileBuilder):
