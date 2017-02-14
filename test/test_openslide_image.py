@@ -1,23 +1,80 @@
 from unittest import TestCase
 import os
+
+import sldc
 from PIL import Image
 import numpy as np
+from numpy.testing import assert_array_equal
+from openslide import OpenSlide
 
 from sldc_openslide import OpenSlideImage
+from sldc_openslide import OpenSlideTileBuilder
+
+
+class FakeImage(sldc.Image):
+    @property
+    def channels(self):
+        return 3
+
+    @property
+    def np_image(self):
+        return np.array([[[1, 2, 1]]])
+
+    @property
+    def width(self):
+        return 1
+
+    @property
+    def height(self):
+        return 1
 
 
 class TestOpenSlideImage(TestCase):
     def setUp(self):
-        self.filename = "test.tif"
-        self.width, self.height = 1200, 1400
-        fake_image = np.zeros((self.height, self.width, 3), dtype=np.uint8)
-        Image.fromarray(fake_image).save()
-
-    def tearDown(self):
-        if os.path.isfile(self.filename):
-            os.remove(self.filename)
+        self.filename = os.path.join(os.path.dirname(__file__), "test.tif")
+        self.png_filename = os.path.join(os.path.dirname(__file__), "test.png")
+        self.width, self.height = 1169, 1027
+        self.level_count = 4
 
     def testOpenSlideImage(self):
         image = OpenSlideImage(self.filename)
         self.assertEqual(image.width, self.width)
         self.assertEqual(image.height, self.height)
+        self.assertEqual(image.level_count, self.level_count)
+        self.assertEqual(image.zoom_level, 0)  # default level should be zero
+        self.assertEqual(image.channels, 3)  # always 3 channels
+        self.assertFalse(image.has_resolution)  # by default no resolution
+        self.assertIsNone(image.resolution)  # default resolution is None
+        self.assertIsNotNone(image.slide)
+        # full image loading
+        with self.assertRaises(NotImplementedError):
+            _ = image.np_image
+        # test setters
+        new_resolution = 25
+        image.resolution = new_resolution
+        self.assertEqual(image.resolution, new_resolution)
+        new_zoom_level = 3
+        image.zoom_level = new_zoom_level
+        self.assertEqual(image.zoom_level, new_zoom_level)
+        invalid_new_zoom_level = self.level_count + 1
+        with self.assertRaises(ValueError):
+            image.zoom_level = invalid_new_zoom_level
+
+    def testOpenSlideTileBuilder(self):
+        image = OpenSlideImage(self.filename)
+        tile_builder = OpenSlideTileBuilder()
+
+        # get tile box
+        offset = (0, 0)
+        width, height = 125, 100
+        tile = tile_builder.build(image, offset, width, height)
+        slide = OpenSlide(self.filename)
+        os_image = slide.read_region(offset, 0, (width, height))
+        tile_image = tile.np_image
+        assert_array_equal(tile_image, os_image)
+
+        # test with invalid base image
+        fake_image = FakeImage()
+        invalid_tile = tile_builder.build(fake_image, offset, width, height)
+        with self.assertRaises(ValueError):
+            _ = invalid_tile.np_image
