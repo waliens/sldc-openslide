@@ -1,6 +1,6 @@
 import numpy as np
 from sldc import Image, Tile, TileBuilder
-from openslide import OpenSlide
+from openslide import OpenSlide, open_slide
 
 
 class OpenSlideImage(Image):
@@ -17,7 +17,7 @@ class OpenSlideImage(Image):
             Zoom level at which the image must be read. 0 for finest resolution, > 0 for coarser resolutions.
         """
         self._filename = filename
-        self._slide = OpenSlide(filename=filename)
+        self._slide = open_slide(filename=filename)
         self._resolution = resolution
         self._level = self._validate_zoom_level(zoom_level)
 
@@ -75,6 +75,15 @@ class OpenSlideImage(Image):
     def slide(self):
         """Return the OpenSlide object representing the slide"""
         return self._slide
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+        self._slide = open_slide(self._filename)
+
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        d["_slide"] = None
+        return d
 
 
 class OpenSlideTile(Tile):
