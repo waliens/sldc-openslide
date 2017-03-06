@@ -4,28 +4,47 @@ import numpy as np
 from PIL.Image import fromarray
 from PIL.ImageDraw import ImageDraw
 from shapely.geometry import Point
+from sldc import DispatchingRule
 from sldc import PolygonClassifier
 from sldc import Segmenter
 from sldc import WorkflowBuilder
 
 from sldc_openslide import OpenSlideImage
+from sldc_openslide import OpenSlideTileBuilder
+
+
+class TifImageSegmenter(Segmenter):
+    def segment(self, image):
+        """Segment a grey circle in black image"""
+        segmented = (image[:, :, 0] < 200)
+        return segmented.astype(np.uint8) * 255
 
 
 class CircleSegmenter(Segmenter):
     def segment(self, image):
         """Segment a grey circle in black image"""
         segmented = (image[:, :, 0] > 50)
-        return segmented.astype("uint8") * 255
+        return segmented.astype(np.uint8) * 255
 
 
-class CircleClassifier(PolygonClassifier):
+class DumbClassifier(PolygonClassifier):
     def predict(self, image, polygon):
         """A polygon classifier which always predict 1 with a probablility 1.0"""
         return 1, 1.0
 
 
+class CircleRule(DispatchingRule):
+    def evaluate(self, image, polygon):
+        """Return true if the polyon is a circle"""
+        return circularity(polygon) > 0.85
+
+
 def relative_error(val, ref):
     return np.abs(val - ref) / ref
+
+
+def circularity(polygon):
+    return 4 * np.pi * polygon.area / (polygon.length * polygon.length)
 
 
 def draw_poly(image, polygon, color=255):
@@ -57,62 +76,64 @@ def draw_circle(image, radius, center, color=255, return_circle=False):
 
 class TestWithinOpenSlideImageWithinSLDC(TestCase):
     def setUp(self):
-        self.filename = os.path.join(os.path.dirname(__file__), "sldc_test_image.tif")
+        self.filename_png = os.path.join(os.path.dirname(__file__), "sldc_test_image.png")
+        self.filename_tif = os.path.join(os.path.dirname(__file__), "test.tif")
 
     def testDetectCircle(self):
         """A test which executes a full workflow on image containing a white circle in the center of an black image
         """
         # build workflow
         builder = WorkflowBuilder()
+        builder.set_tile_builder(OpenSlideTileBuilder())
         builder.set_segmenter(CircleSegmenter())
-        builder.add_catchall_classifier(CircleClassifier())
+        builder.add_classifier(CircleRule(), DumbClassifier(), dispatching_label="circle")
         workflow = builder.get()
 
         # process image
-        image = OpenSlideImage(self.filename)
+        image = OpenSlideImage(self.filename_png)
         workflow_info = workflow.process(image)
 
         # Check results
-        self.assertEqual(len(workflow_info.polygons), 1)
+        self.assertEqual(len(workflow_info.polygons),  5)
+        self.assertEqual(len([d for d in workflow_info.dispatch if d is not None]), 2)
 
-        # Check circle
-        polygon = workflow_info.polygons[0]
-        self.assertEqual(relative_error(polygon.area, np.pi * 750 * 750) <= 0.005, True)
-        self.assertEqual(relative_error(polygon.centroid.x, 1000) <= 0.005, True)
-        self.assertEqual(relative_error(polygon.centroid.y, 1000) <= 0.005, True)
-        self.assertEqual(workflow_info.classes, [1])
-        self.assertEqual(workflow_info.probas, [1.0])
-        self.assertEqual(workflow_info.dispatch, ["catchall"])
-
-    def testDetectCircleParallel(self):
+    def testDetectCircleParallelWithPng(self):
         """A test which executes a full workflow on image containing a white circle in the center of an black image in
         parallel
         """
-        # generate circle image
-        w, h = 2000, 2000
-        image = np.zeros((w, h, 3), dtype="uint8")
-        image = draw_circle(image, 750, (1000, 1000), color=[129, 129, 129])
-
         # build workflow
         builder = WorkflowBuilder()
         builder.set_n_jobs(2)
-        builder.set_segmenter(CircleSegmenter())
-        builder.add_catchall_classifier(CircleClassifier())
         builder.set_parallel_dc(True)
+        builder.set_tile_builder(OpenSlideTileBuilder())
+        builder.set_segmenter(CircleSegmenter())
+        builder.add_classifier(CircleRule(), DumbClassifier(), dispatching_label="circle")
         workflow = builder.get()
 
         # process image
-        image = OpenSlideImage(self.filename)
+        image = OpenSlideImage(self.filename_png)
         workflow_info = workflow.process(image)
 
         # Check results
-        self.assertEqual(len(workflow_info.polygons), 1)
+        self.assertEqual(len(workflow_info.polygons),  5)
+        self.assertEqual(len([d for d in workflow_info.dispatch if d is not None]), 2)
 
-        # Check circle
-        polygon = workflow_info.polygons[0]
-        self.assertEqual(relative_error(polygon.area, np.pi * 750 * 750) <= 0.005, True)
-        self.assertEqual(relative_error(polygon.centroid.x, 1000) <= 0.005, True)
-        self.assertEqual(relative_error(polygon.centroid.y, 1000) <= 0.005, True)
-        self.assertEqual(workflow_info.classes, [1])
-        self.assertEqual(workflow_info.probas, [1.0])
-        self.assertEqual(workflow_info.dispatch, ["catchall"])
+    def testDetectCircleParallelWithTif(self):
+        """A test which executes a full workflow on image containing a white circle in the center of an black image in
+        parallel. With a tif, openslide uses a ctype object which might cause trouble at pickling (-> need for testing).
+        """
+        # build workflow
+        builder = WorkflowBuilder()
+        builder.set_n_jobs(2)
+        builder.set_parallel_dc(True)
+        builder.set_tile_builder(OpenSlideTileBuilder())
+        builder.set_segmenter(TifImageSegmenter())
+        builder.add_catchall_classifier(DumbClassifier())
+        workflow = builder.get()
+
+        # process image
+        image = OpenSlideImage(self.filename_tif)
+        workflow_info = workflow.process(image)
+
+        # Check results
+        self.assertEqual(len(workflow_info.polygons), 25)
