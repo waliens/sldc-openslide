@@ -35,6 +35,10 @@ install:
   - cd sldc
   - python setup.py install
 
+  # Move back to repo folder and delete sldc folder
+  - cd ..
+  - rm -rf sldc
+
 script:
   - coverage run -m unittest discover .
 

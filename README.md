@@ -3,6 +3,9 @@
 [*__SLDC__*](https://github.com/waliens/sldc) is a Python library that aims at accelerating development of large images analysis workflows.
 *SLDC-OpenSlide* is a Python binding for using *SLDC* with the *OpenSlide* image library. In practice, it enables workflows to process large images stored locally on disk.
 
+[![Build status](https://travis-ci.org/waliens/sldc-openslide.svg?branch=master)](https://travis-ci.org/waliens/sldc-openslide)
+[![codecov](https://codecov.io/gh/waliens/sldc-openslide/branch/master/graph/badge.svg)](https://codecov.io/gh/waliens/sldc-openslide)
+
 ## Install
 
 1. Install SLDC: [https://github.com/waliens/sldc](https://github.com/waliens/sldc#install)
