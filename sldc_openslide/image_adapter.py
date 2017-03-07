@@ -17,7 +17,7 @@ class OpenSlideImage(Image):
             Zoom level at which the image must be read. 0 for finest resolution, > 0 for coarser resolutions.
         """
         self._filename = filename
-        self._slide = open_slide(filename=filename)
+        self._slide = self._open()
         self._resolution = resolution
         self._level = self._validate_zoom_level(zoom_level)
 
@@ -78,12 +78,26 @@ class OpenSlideImage(Image):
 
     def __setstate__(self, state):
         self.__dict__ = state
-        self._slide = open_slide(self._filename)
+        self._slide = self._open()
 
     def __getstate__(self):
         d = dict(self.__dict__)
         d["_slide"] = None
         return d
+
+    def _open(self):
+        return open_slide(self._filename)
+
+    def close(self):
+        """Close the file buffer"""
+        self._slide.close()
+
+    def __enter__(self):
+        self._slide = self._open() if self._slide is None else self._slide
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # close file if used in a context manager
+        self.close()
 
 
 class OpenSlideTile(Tile):
