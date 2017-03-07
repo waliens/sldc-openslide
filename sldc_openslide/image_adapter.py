@@ -94,6 +94,7 @@ class OpenSlideImage(Image):
 
     def __enter__(self):
         self._slide = self._open() if self._slide is None else self._slide
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # close file if used in a context manager
