@@ -1,0 +1,42 @@
+language: python
+python:
+  # We don't actually use the Travis Python, but this keeps it organized.
+  - "2.7"
+  - "3.5"
+  # - "3.6" Dependency conflict between shapely and python 3.6 (openssl 1.0.1)
+install:
+  - sudo apt-get update
+  # We do this conditionally because it saves us some downloading if the
+  # version is the same.
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+    else
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+
+  # Install sldc environment
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pillow numpy joblib shapely opencv scipy
+  - source activate test-environment
+  - pip install codecov
+
+  # install openslide
+  - sudo apt-get install openslide-tools
+  - pip install openslide-python
+
+  # install sldc
+  - git clone https://github.com/waliens/sldc-openslide.git
+  - cd sldc-openslide
+  - python setup.py install
+  
+script:
+  - coverage run -m unittest discover .
+
+after_success:
+  - codecov
