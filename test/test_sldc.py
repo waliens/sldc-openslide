@@ -90,8 +90,8 @@ class TestWithinOpenSlideImageWithinSLDC(TestCase):
         workflow = builder.get()
 
         # process image
-        image = OpenSlideImage(self.filename_png)
-        workflow_info = workflow.process(image)
+        with OpenSlideImage(self.filename_png) as image:
+            workflow_info = workflow.process(image)
 
         # Check results
         self.assertEqual(len(workflow_info.polygons),  5)
@@ -111,8 +111,8 @@ class TestWithinOpenSlideImageWithinSLDC(TestCase):
         workflow = builder.get()
 
         # process image
-        image = OpenSlideImage(self.filename_png)
-        workflow_info = workflow.process(image)
+        with OpenSlideImage(self.filename_png) as image:
+            workflow_info = workflow.process(image)
 
         # Check results
         self.assertEqual(len(workflow_info.polygons),  5)
@@ -132,8 +132,8 @@ class TestWithinOpenSlideImageWithinSLDC(TestCase):
         workflow = builder.get()
 
         # process image
-        image = OpenSlideImage(self.filename_tif)
-        workflow_info = workflow.process(image)
+        with OpenSlideImage(self.filename_tif) as image:
+            workflow_info = workflow.process(image)
 
         # Check results
         self.assertEqual(len(workflow_info.polygons), 25)
