@@ -22,3 +22,5 @@
 
 * `OpenSlideTileBuilder`: a builder that builds tiles using an `OpenSlideImage` as parent image. This is the tile builder that must be passed to the builder at the workflow construction.
 * `OpenSlideImage`: adapts `OpenSlide` class to match *SLDC* `Image` interface. This is the `Image` object that must be passed to the `process` method of your workflow.
+
+*__Note__*: Any instance of `OpenSlideImage` hold a file resource which must hence be released when the image is not needed anymore. You can either explicitely close the resource by calling `image.close()` or by using a context manager. In both case, the instance `image` cannot be used anymore after being closed, otherwise resulting in undefined behavior.
