@@ -31,10 +31,10 @@ install:
   - pip install openslide-python
 
   # install sldc
-  - git clone https://github.com/waliens/sldc-openslide.git
-  - cd sldc-openslide
+  - git clone https://github.com/waliens/sldc.git
+  - cd sldc
   - python setup.py install
-  
+
 script:
   - coverage run -m unittest discover .
 
