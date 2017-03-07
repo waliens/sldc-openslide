@@ -59,6 +59,7 @@ class TestOpenSlideImage(TestCase):
         invalid_new_zoom_level = self.level_count + 1
         with self.assertRaises(ValueError):
             image.zoom_level = invalid_new_zoom_level
+        image.close()
 
     def testOpenSlideTileBuilder(self):
         image = OpenSlideImage(self.filename)
@@ -78,3 +79,4 @@ class TestOpenSlideImage(TestCase):
         invalid_tile = tile_builder.build(fake_image, offset, width, height)
         with self.assertRaises(ValueError):
             _ = invalid_tile.np_image
+        image.close()
