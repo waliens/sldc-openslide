@@ -5,7 +5,7 @@ import sldc
 from PIL import Image
 import numpy as np
 from numpy.testing import assert_array_equal
-from openslide import OpenSlide
+from openslide import OpenSlide, open_slide
 
 from sldc_openslide import OpenSlideImage
 from sldc_openslide import OpenSlideTileBuilder
@@ -80,3 +80,24 @@ class TestOpenSlideImage(TestCase):
         with self.assertRaises(ValueError):
             _ = invalid_tile.np_image
         image.close()
+
+    def testOpenSlideImageWithZoom(self):
+        zoom_level = 1
+        os_image = open_slide(self.filename)
+        image = OpenSlideImage(self.filename, zoom_level=zoom_level)
+
+        # test dimensions
+        self.assertEqual(os_image.level_dimensions[zoom_level], (image.width, image.height))
+
+        # test topology
+        tile_width = tile_height = 300
+        topology = image.tile_topology(OpenSlideTileBuilder(), max_height=tile_height, max_width=tile_width, overlap=0)
+        self.assertEqual(topology.tile_count, 4)
+        tile = topology.tile(1)
+        self.assertEqual(tile.offset, (0, 0))
+        self.assertEqual(tile.width, tile_width)
+        self.assertEqual(tile.height, tile_height)
+        tile2 = topology.tile(4)
+        self.assertEqual(tile2.offset, (tile_width, tile_height))
+        self.assertEqual(tile2.width, image.width - tile_width)
+        self.assertEqual(tile2.height, image.height - tile_height)

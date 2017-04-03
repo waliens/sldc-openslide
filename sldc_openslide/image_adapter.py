@@ -12,7 +12,7 @@ class OpenSlideImage(Image):
         filename: str
             The path to the whole-slide image file
         resolution: int/float
-            The resolution of the image (e.g. in micrometer squared per pixel squared
+            The resolution of the image for the maximal zoom (e.g. in micrometer squared per pixel squared)
         zoom_level: int
             Zoom level at which the image must be read. 0 for finest resolution, > 0 for coarser resolutions.
         """
@@ -23,7 +23,7 @@ class OpenSlideImage(Image):
 
     @property
     def height(self):
-        return self._slide.dimensions[1]
+        return self._slide.level_dimensions[self._level][1]
 
     @property
     def np_image(self):
@@ -32,7 +32,7 @@ class OpenSlideImage(Image):
 
     @property
     def width(self):
-        return self._slide.dimensions[0]
+        return self._slide.level_dimensions[self._level][0]
 
     @property
     def channels(self):
