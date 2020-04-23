@@ -20,6 +20,8 @@ class OpenSlideImage(Image):
         self._slide = self._open()
         self._resolution = resolution
         self._level = self._validate_zoom_level(zoom_level)
+        if self._level > 0:
+            raise NotImplementedError("Zoom level > 0 is not supported yet")
 
     @property
     def height(self):
